@@ -2,6 +2,7 @@ package io.slinkydeveloper.events.impl;
 
 import io.slinkydeveloper.events.Event;
 import io.slinkydeveloper.events.EventPersistanceManager;
+import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 
 import java.time.ZonedDateTime;
@@ -72,10 +73,11 @@ public class InMemoryEventPersistanceManager implements EventPersistanceManager 
 
   @Override
   public Future<List<Event>> cleanEventsCompletedBefore(ZonedDateTime before) {
-    return this.getCompletedEvents().map(events -> {
-      List<Event> eventsToRemove = events.stream().filter(e -> before.compareTo(ZonedDateTime.parse(e.getCompletionDateTime())) <= 0).collect(Collectors.toList());
-      eventsToRemove.forEach(e -> this.deleteEvent(e.getId()));
-      return eventsToRemove;
+    return this.getCompletedEvents().compose(events -> {
+      List<Event> eventsToRemove = events.stream().filter(e -> before.compareTo(ZonedDateTime.parse(e.getCompletionDateTime())) >= 0).collect(Collectors.toList());
+      return CompositeFuture.all(
+          eventsToRemove.stream().map(e -> this.deleteEvent(e.getId())).collect(Collectors.toList())
+      ).map(eventsToRemove);
     });
   }
 

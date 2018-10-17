@@ -313,15 +313,17 @@ public abstract class BaseEventPersistenceManager {
         persistance.addEvent(event3)
     ).recover(this.assertNotFail(test))
         .compose(res -> persistance.cleanEventsCompletedBefore(ZonedDateTime.now().minusMinutes(30)))
-        .recover(this.assertNotFail(test))
-        .compose(res -> persistance.getAllEvents())
-        .recover(this.assertNotFail(test))
-        .compose(events -> {
-          test.verify(() -> assertTrue(events.stream().anyMatch(e -> "superEventOfFirstType".equals(e.getEventType()))));
-          test.verify(() -> assertTrue(events.stream().noneMatch(e -> "superEventOfSecondType".equals(e.getEventType()))));
-          test.verify(() -> assertTrue(events.stream().anyMatch(e -> "superEventOfThirdType".equals(e.getEventType()))));
-          return this.completeNow(test);
-        });
+        .setHandler(test.succeeding(l -> {
+          test.verify(() -> assertEquals("superEventOfSecondType", l.get(0).getEventType()));
+          persistance
+              .getAllEvents().recover(this.assertNotFail(test))
+              .compose(events -> {
+                test.verify(() -> assertTrue(events.stream().anyMatch(e -> "superEventOfFirstType".equals(e.getEventType()))));
+                test.verify(() -> assertTrue(events.stream().noneMatch(e -> "superEventOfSecondType".equals(e.getEventType()))));
+                test.verify(() -> assertTrue(events.stream().anyMatch(e -> "superEventOfThirdType".equals(e.getEventType()))));
+                return this.completeNow(test);
+              });
+        }));
   }
 
   private <T> Function<Throwable, Future<T>> assertNotFail(VertxTestContext test) {

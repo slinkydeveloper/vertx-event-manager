@@ -19,6 +19,7 @@ public interface EventManagerAdmin extends EventManager {
   void getEvent(String eventId, Handler<AsyncResult<Event>> resultHandler);
   void unregisterEvent(String eventId, Handler<AsyncResult<Void>> resultHandler);
   void getEventsFilteredByState(EventState state, Handler<AsyncResult<List<Event>>> resultHandler);
+  void cleanEventsCompletedBefore(String zonedDateTimeBefore, Handler<AsyncResult<List<Event>>> resultHandler);
   void start(Handler<AsyncResult<Void>> resultHandler);
   void stop();
 

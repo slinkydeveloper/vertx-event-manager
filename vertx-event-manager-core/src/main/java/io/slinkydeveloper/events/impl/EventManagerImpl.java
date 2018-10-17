@@ -55,19 +55,40 @@ public class EventManagerImpl implements EventManagerAdmin {
 
   @Override
   public void getEvent(String eventId, Handler<AsyncResult<Event>> resultHandler) {
-    resultHandler.handle(persistance.getEvent(eventId));
+    persistance.getEvent(eventId).setHandler(ar -> {
+      if (ar.succeeded())
+        resultHandler.handle(Future.succeededFuture(ar.result()));
+      else resultHandler.handle(Future.failedFuture(ar.cause()));
+    });
   }
 
   @Override
   public void unregisterEvent(String eventId, Handler<AsyncResult<Void>> resultHandler) {
     if (!isRunning.get()) throw new IllegalStateException("EventManager is not running");
     stopTimer(eventId);
-    resultHandler.handle(persistance.deleteEvent(eventId));
+    persistance.deleteEvent(eventId).setHandler(ar -> {
+      if (ar.succeeded())
+        resultHandler.handle(Future.succeededFuture());
+      else resultHandler.handle(Future.failedFuture(ar.cause()));
+    });
   }
 
   @Override
   public void getEventsFilteredByState(EventState state, Handler<AsyncResult<List<Event>>> resultHandler) {
-    resultHandler.handle(persistance.getEventsFilteredByState(state));
+    persistance.getEventsFilteredByState(state).setHandler(ar -> {
+      if (ar.succeeded())
+        resultHandler.handle(Future.succeededFuture(ar.result()));
+      else resultHandler.handle(Future.failedFuture(ar.cause()));
+    });
+  }
+
+  @Override
+  public void cleanEventsCompletedBefore(String zonedDateTimeBefore, Handler<AsyncResult<List<Event>>> resultHandler) {
+    persistance.cleanEventsCompletedBefore(ZonedDateTime.parse(zonedDateTimeBefore)).setHandler(ar -> {
+      if (ar.succeeded())
+        resultHandler.handle(Future.succeededFuture(ar.result()));
+      else resultHandler.handle(Future.failedFuture(ar.cause()));
+    });
   }
 
   @Override

@@ -1,4 +1,4 @@
-package io.slinkydeveloper.events.persistance;
+package io.slinkydeveloper.events.persistence;
 
 import io.slinkydeveloper.events.Event;
 import io.slinkydeveloper.events.EventState;
@@ -7,7 +7,7 @@ import io.vertx.core.Future;
 import java.time.ZonedDateTime;
 import java.util.List;
 
-public interface EventPersistanceManager {
+public interface EventPersistenceManager {
 
   Future<Event> addEvent(Event event);
   Future<Event> getEvent(String eventId);

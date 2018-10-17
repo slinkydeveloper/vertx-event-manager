@@ -2,7 +2,7 @@ package io.slinkydeveloper.events.impl;
 
 import io.slinkydeveloper.events.*;
 import io.slinkydeveloper.events.logic.EventLogicManager;
-import io.slinkydeveloper.events.persistance.EventPersistanceManager;
+import io.slinkydeveloper.events.persistence.EventPersistenceManager;
 import io.vertx.core.*;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
@@ -19,16 +19,16 @@ public class EventManagerImpl implements EventManagerAdmin {
   private final static Logger log = LoggerFactory.getLogger(EventManagerImpl.class);
 
   private Vertx vertx;
-  private EventPersistanceManager persistance;
+  private EventPersistenceManager persistance;
   private EventLogicManager logicManager;
 
   final protected Map<String, Long> timersId;
 
   private AtomicBoolean isRunning;
 
-  public EventManagerImpl(Vertx vertx, EventPersistanceManager persistance, EventLogicManager logicManager) {
+  public EventManagerImpl(Vertx vertx, EventPersistenceManager persistence, EventLogicManager logicManager) {
     this.vertx = vertx;
-    this.persistance = persistance;
+    this.persistance = persistence;
     this.logicManager = logicManager;
 
     this.timersId = new ConcurrentHashMap<>();
@@ -38,14 +38,19 @@ public class EventManagerImpl implements EventManagerAdmin {
   @Override
   public void registerEvent(Event event, Handler<AsyncResult<String>> resultHandler) {
     if (!isRunning.get()) throw new IllegalStateException("EventManager is not running");
-    resultHandler.handle(persistance.addEvent(event).map(e -> {
-      if (isPast(ZonedDateTime.parse(e.getTriggerDateTime()))) {
-        this.runEvent(e.getId());
+    persistance.addEvent(event).setHandler(ar -> {
+      if (ar.succeeded()) {
+        String eventId = ar.result().getId();
+        if (isPast(ZonedDateTime.parse(ar.result().getTriggerDateTime()))) {
+          this.runEvent(eventId);
+        } else {
+          this.startTimer(ar.result());
+        }
+        resultHandler.handle(Future.succeededFuture(eventId));
       } else {
-        this.startTimer(e);
+        resultHandler.handle(Future.failedFuture(ar.cause()));
       }
-      return e.getId();
-    }));
+    });
   }
 
   @Override
@@ -68,35 +73,28 @@ public class EventManagerImpl implements EventManagerAdmin {
   @Override
   public void start(Handler<AsyncResult<Void>> resultHandler) {
     if (isRunning.get()) throw new IllegalStateException("EventManager is already running");
-    Future<Void> fut = CompositeFuture.all(
-        // Set timers for pending events and start past events
-        persistance.getEventsFilteredByState(EventState.PENDING).setHandler(ar -> {
-          if (ar.succeeded()) {
-            ar.result().forEach(e -> {
-              if (isPast(ZonedDateTime.parse(e.getTriggerDateTime()))) {
-                this.runEvent(e.getId());
-              } else {
-                this.startTimer(e);
-              }
-            });
-          } else {
-            log.error("Something went wrong during pending event retrieval: {}", ar.cause());
-          }
-        }),
-        // Set starving events state
-        persistance.getEventsFilteredByState(EventState.RUNNING).setHandler(ar -> {
-          if (ar.succeeded()) {
-            ar.result().forEach(e -> {
-              this.persistance.updateEvent(e.setState(EventState.STARVING));
-              log.info("Set STARVING status for event {}", e.getId());
-            });
-          } else {
-            log.error("Something went wrong during running event retrieval: {}", ar.cause());
-          }
-        })
-    ).compose(c -> Future.succeededFuture());
-    this.isRunning.set(true);
-    resultHandler.handle(Future.succeededFuture());
+    CompositeFuture.all(
+        persistance.getEventsFilteredByState(EventState.PENDING),
+        persistance.getEventsFilteredByState(EventState.RUNNING)
+    ).setHandler(cf -> {
+      // Set timers for pending events and start past events
+      ((List<Event>)cf.result().resultAt(0)).forEach(e -> {
+        if (isPast(ZonedDateTime.parse(e.getTriggerDateTime()))) {
+          this.runEvent(e.getId());
+        } else {
+          this.startTimer(e);
+        }
+      });
+
+      // Set starving events state
+      ((List<Event>)cf.result().resultAt(1)).forEach(e -> {
+        this.persistance.updateEvent(e.setState(EventState.STARVING));
+        log.info("Set STARVING status for event " + e.getId());
+      });
+
+      this.isRunning.set(true);
+      resultHandler.handle(Future.succeededFuture());
+    });
   }
 
   @Override
@@ -153,7 +151,7 @@ public class EventManagerImpl implements EventManagerAdmin {
               }
             });
           } else {
-            log.error("Cannot update event {}: ", eventId, ar.cause());
+            log.error("Cannot update event " + eventId + ": " + ar.cause());
           }
         });
   }

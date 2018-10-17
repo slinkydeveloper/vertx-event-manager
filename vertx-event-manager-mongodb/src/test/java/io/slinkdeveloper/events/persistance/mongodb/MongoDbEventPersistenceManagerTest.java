@@ -1,7 +1,6 @@
 package io.slinkdeveloper.events.persistance.mongodb;
 
-import io.slinkydeveloper.events.persistance.BaseEventPersistanceManager;
-import io.slinkydeveloper.events.persistance.inmemory.InMemoryEventPersistanceManager;
+import io.slinkydeveloper.events.persistence.BaseEventPersistenceManager;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.mongo.MongoClient;
@@ -16,7 +15,7 @@ import java.util.concurrent.TimeUnit;
 @ExtendWith(VertxExtension.class)
 @Timeout(value = 2, timeUnit = TimeUnit.SECONDS)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-public class MongoDbEventPersistanceManagerTest extends BaseEventPersistanceManager {
+public class MongoDbEventPersistenceManagerTest extends BaseEventPersistenceManager {
 
   MongoClient client;
 
@@ -26,7 +25,7 @@ public class MongoDbEventPersistanceManagerTest extends BaseEventPersistanceMana
         vertx,
         new JsonObject().put("db_name", "test").put("connection_string", "mongodb://127.0.0.1:27017")
     );
-    this.persistance = new MongoDbEventPersistanceManager(client, "eventManager");
+    this.persistance = new MongoDbEventPersistenceManager(client, "eventManager");
     testContext.completeNow();
   }
 

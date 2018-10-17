@@ -1,7 +1,7 @@
-package io.slinkydeveloper.events.persistance.inmemory;
+package io.slinkydeveloper.events.persistence.inmemory;
 
 import io.slinkydeveloper.events.Event;
-import io.slinkydeveloper.events.persistance.EventPersistanceManager;
+import io.slinkydeveloper.events.persistence.EventPersistenceManager;
 import io.slinkydeveloper.events.EventState;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
@@ -11,11 +11,11 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
-public class InMemoryEventPersistanceManager implements EventPersistanceManager {
+public class InMemoryEventPersistenceManager implements EventPersistenceManager {
 
   protected Map<String, Event> eventsMap;
 
-  public InMemoryEventPersistanceManager() {
+  public InMemoryEventPersistenceManager() {
     this.eventsMap = new ConcurrentHashMap<>();
   }
 

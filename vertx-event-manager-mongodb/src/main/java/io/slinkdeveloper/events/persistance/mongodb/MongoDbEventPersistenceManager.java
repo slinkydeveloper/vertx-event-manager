@@ -2,7 +2,7 @@ package io.slinkdeveloper.events.persistance.mongodb;
 
 import io.slinkydeveloper.events.Event;
 import io.slinkydeveloper.events.EventState;
-import io.slinkydeveloper.events.persistance.EventPersistanceManager;
+import io.slinkydeveloper.events.persistence.EventPersistenceManager;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonArray;
@@ -10,17 +10,16 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.ext.mongo.MongoClient;
 
 import java.time.ZonedDateTime;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-public class MongoDbEventPersistanceManager implements EventPersistanceManager {
+public class MongoDbEventPersistenceManager implements EventPersistenceManager {
 
   private MongoClient client;
   private String collectionName;
 
-  public MongoDbEventPersistanceManager(MongoClient client, String collectionName) {
+  public MongoDbEventPersistenceManager(MongoClient client, String collectionName) {
     this.client = client;
     this.collectionName = collectionName;
   }
@@ -36,7 +35,7 @@ public class MongoDbEventPersistanceManager implements EventPersistanceManager {
   public Future<Event> getEvent(String eventId) {
     Future<JsonObject> res = Future.future();
     client.findOne(this.collectionName, createIdQuery(eventId), null, res.completer());
-    return res.map(jo -> (jo != null) ? new Event(jo) : null);
+    return res.map(this::buildEventFromJsonObject);
   }
 
   @Override
@@ -86,7 +85,8 @@ public class MongoDbEventPersistanceManager implements EventPersistanceManager {
   }
 
   private Event buildEventFromJsonObject(JsonObject obj) {
-    return new Event(obj).setId(obj.getString("_id"));
+    if (obj != null) return new Event(obj.put("id", obj.getString("_id")));
+    else return null;
   }
 
   private JsonObject createIdQuery(String eventId) {

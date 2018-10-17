@@ -1,16 +1,13 @@
-package io.slinkydeveloper.events.persistance;
+package io.slinkydeveloper.events.persistence;
 
 import io.slinkydeveloper.events.Event;
-import io.slinkydeveloper.events.persistance.EventPersistanceManager;
 import io.slinkydeveloper.events.EventState;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
-import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import static org.junit.jupiter.api.Assertions.*;
@@ -19,9 +16,9 @@ import java.time.ZonedDateTime;
 import java.util.function.Function;
 
 @ExtendWith(VertxExtension.class)
-public abstract class BaseEventPersistanceManager {
+public abstract class BaseEventPersistenceManager {
 
-  public EventPersistanceManager persistance;
+  public EventPersistenceManager persistance;
 
   @Test
   void addEvent(VertxTestContext test) {
@@ -32,13 +29,15 @@ public abstract class BaseEventPersistanceManager {
         new JsonObject().put("someData", "someValue")
     );
     persistance.addEvent(event).setHandler(test.succeeding(newEvent -> {
-      assertNotNull(newEvent.getId());
-      assertNotNull(newEvent.getTriggerDateTime());
-      assertNull(newEvent.getCompletionDateTime());
-      assertEquals(event.getCreationDateTime(), newEvent.getCreationDateTime());
-      assertNull(newEvent.getEventResult());
-      assertEquals(event.getEventType(), newEvent.getEventType());
-      assertEquals(event.getEventData(), newEvent.getEventData());
+      test.verify(() -> {
+        assertNotNull(newEvent.getId());
+        assertNotNull(newEvent.getTriggerDateTime());
+        assertNull(newEvent.getCompletionDateTime());
+        assertEquals(event.getCreationDateTime(), newEvent.getCreationDateTime());
+        assertNull(newEvent.getEventResult());
+        assertEquals(event.getEventType(), newEvent.getEventType());
+        assertEquals(event.getEventData(), newEvent.getEventData());
+      });
       test.completeNow();
     }));
   }
@@ -59,12 +58,14 @@ public abstract class BaseEventPersistanceManager {
         .compose(pushedEvent -> persistance.getEvent(pushedEvent.getId()))
         .recover(this.assertNotFail(test))
         .compose(retrievedEvent -> {
-          assertEquals(event.getCompletionDateTime(), retrievedEvent.getCompletionDateTime());
-          assertEquals(event.getCreationDateTime(), retrievedEvent.getCreationDateTime());
-          assertEquals(event.getTriggerDateTime(), retrievedEvent.getTriggerDateTime());
-          assertEquals(event.getEventData(), retrievedEvent.getEventData());
-          assertEquals(event.getEventType(), retrievedEvent.getEventType());
-          assertEquals(event.getEventResult(), retrievedEvent.getEventResult());
+          test.verify(() -> {
+            assertEquals(event.getCompletionDateTime(), retrievedEvent.getCompletionDateTime());
+            assertEquals(event.getCreationDateTime(), retrievedEvent.getCreationDateTime());
+            assertEquals(event.getTriggerDateTime(), retrievedEvent.getTriggerDateTime());
+            assertEquals(event.getEventData(), retrievedEvent.getEventData());
+            assertEquals(event.getEventType(), retrievedEvent.getEventType());
+            assertEquals(event.getEventResult(), retrievedEvent.getEventResult());
+          });
           return this.completeNow(test);
         });
   }
@@ -121,7 +122,7 @@ public abstract class BaseEventPersistanceManager {
     persistance.addEvent(event).setHandler(test.succeeding(pushedEvent ->
       persistance.updateEvent(pushedEvent.setEventResult(newEventResult)).setHandler(test.succeeding(res ->
           persistance.getEvent(pushedEvent.getId()).setHandler(test.succeeding(retrievedEvent -> {
-            assertEquals(newEventResult, retrievedEvent.getEventResult());
+            test.verify(() -> assertEquals(newEventResult, retrievedEvent.getEventResult()));
             test.completeNow();
           }))
       ))
@@ -156,9 +157,11 @@ public abstract class BaseEventPersistanceManager {
         .compose(res -> persistance.getAllEvents())
         .recover(this.assertNotFail(test))
         .compose(events -> {
-          assertTrue(events.stream().anyMatch(e -> "superEventOfFirstType".equals(e.getEventType())));
-          assertTrue(events.stream().anyMatch(e -> "superEventOfSecondType".equals(e.getEventType())));
-          assertTrue(events.stream().anyMatch(e -> "superEventOfThirdType".equals(e.getEventType())));
+          test.verify(() -> {
+            assertTrue(events.stream().anyMatch(e -> "superEventOfFirstType".equals(e.getEventType())));
+            assertTrue(events.stream().anyMatch(e -> "superEventOfSecondType".equals(e.getEventType())));
+            assertTrue(events.stream().anyMatch(e -> "superEventOfThirdType".equals(e.getEventType())));
+          });
           return this.completeNow(test);
         });
   }
@@ -193,9 +196,11 @@ public abstract class BaseEventPersistanceManager {
         .compose(res -> persistance.getEventsFilteredByState(EventState.PENDING))
         .recover(this.assertNotFail(test))
         .compose(events -> {
-          assertTrue(events.stream().anyMatch(e -> "superEventOfFirstType".equals(e.getEventType())));
-          assertTrue(events.stream().noneMatch(e -> "superEventOfSecondType".equals(e.getEventType())));
-          assertTrue(events.stream().noneMatch(e -> "superEventOfThirdType".equals(e.getEventType())));
+          test.verify(() -> {
+            assertTrue(events.stream().anyMatch(e -> "superEventOfFirstType".equals(e.getEventType())));
+            assertTrue(events.stream().noneMatch(e -> "superEventOfSecondType".equals(e.getEventType())));
+            assertTrue(events.stream().noneMatch(e -> "superEventOfThirdType".equals(e.getEventType())));
+          });
           return this.completeNow(test);
         });
   }
@@ -230,9 +235,11 @@ public abstract class BaseEventPersistanceManager {
         .compose(res -> persistance.getEventsFilteredByState(EventState.RUNNING))
         .recover(this.assertNotFail(test))
         .compose(events -> {
-          assertTrue(events.stream().noneMatch(e -> "superEventOfFirstType".equals(e.getEventType())));
-          assertTrue(events.stream().anyMatch(e -> "superEventOfSecondType".equals(e.getEventType())));
-          assertTrue(events.stream().noneMatch(e -> "superEventOfThirdType".equals(e.getEventType())));
+          test.verify(() -> {
+            assertTrue(events.stream().noneMatch(e -> "superEventOfFirstType".equals(e.getEventType())));
+            assertTrue(events.stream().anyMatch(e -> "superEventOfSecondType".equals(e.getEventType())));
+            assertTrue(events.stream().noneMatch(e -> "superEventOfThirdType".equals(e.getEventType())));
+          });
           return this.completeNow(test);
         });
   }
@@ -267,9 +274,11 @@ public abstract class BaseEventPersistanceManager {
         .compose(res -> persistance.getEventsFilteredByState(EventState.COMPLETED))
         .recover(this.assertNotFail(test))
         .compose(events -> {
-          assertTrue(events.stream().noneMatch(e -> "superEventOfFirstType".equals(e.getEventType())));
-          assertTrue(events.stream().noneMatch(e -> "superEventOfSecondType".equals(e.getEventType())));
-          assertTrue(events.stream().anyMatch(e -> "superEventOfThirdType".equals(e.getEventType())));
+          test.verify(() -> {
+            assertTrue(events.stream().noneMatch(e -> "superEventOfFirstType".equals(e.getEventType())));
+            assertTrue(events.stream().noneMatch(e -> "superEventOfSecondType".equals(e.getEventType())));
+            assertTrue(events.stream().anyMatch(e -> "superEventOfThirdType".equals(e.getEventType())));
+          });
           return this.completeNow(test);
         });
   }

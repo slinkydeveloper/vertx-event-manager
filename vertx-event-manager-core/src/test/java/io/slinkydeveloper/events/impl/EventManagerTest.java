@@ -2,7 +2,7 @@ package io.slinkydeveloper.events.impl;
 
 import io.slinkydeveloper.events.*;
 import io.slinkydeveloper.events.logic.EventLogicManager;
-import io.slinkydeveloper.events.persistance.inmemory.InMemoryEventPersistanceManager;
+import io.slinkydeveloper.events.persistence.inmemory.InMemoryEventPersistenceManager;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
@@ -22,12 +22,12 @@ import static org.junit.jupiter.api.Assertions.*;
 public class EventManagerTest {
 
   EventManagerImpl eventManager;
-  InMemoryEventPersistanceManager persistance;
+  InMemoryEventPersistenceManager persistance;
   EventLogicManager logicManager;
 
   @BeforeEach
   void before(Vertx vertx, VertxTestContext testContext) {
-    this.persistance = new InMemoryEventPersistanceManager();
+    this.persistance = new InMemoryEventPersistenceManager();
     this.logicManager = EventLogicManager.create();
     this.eventManager = new EventManagerImpl(vertx, persistance, logicManager);
     testContext.completeNow();
@@ -55,14 +55,13 @@ public class EventManagerTest {
 
       this.eventManager.registerEvent(event, test.succeeding(eventId -> {
         test.verify(() -> assertNotNull(eventId));
-
         test.verify(() -> assertTrue(this.persistance.getEventsMap().containsKey(eventId)));
         test.verify(() -> assertEquals(EventState.PENDING, this.persistance.getEventsMap().get(eventId).getState()));
         eventCreationCheckpoint.flag();
         vertx.setTimer(1000, id -> {
           this.eventManager.getEvent(eventId, test.succeeding(res -> {
-            test.verify(() -> assertEquals(new JsonObject().put("key", "result"), this.persistance.getEventsMap().get(eventId).getEventResult()));
             test.verify(() -> assertEquals(new JsonObject().put("key", "result"), res.getEventResult()));
+            test.verify(() -> assertEquals(new JsonObject().put("key", "result"), this.persistance.getEventsMap().get(eventId).getEventResult()));
             test.verify(() -> assertEquals(EventState.COMPLETED, this.persistance.getEventsMap().get(eventId).getState()));
             retrieveResult.flag();
           }));

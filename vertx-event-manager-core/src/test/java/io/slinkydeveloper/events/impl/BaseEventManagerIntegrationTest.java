@@ -2,15 +2,14 @@ package io.slinkydeveloper.events.impl;
 
 import io.slinkydeveloper.events.*;
 import io.slinkydeveloper.events.logic.EventLogicManager;
-import io.slinkydeveloper.events.persistence.inmemory.InMemoryEventPersistenceManager;
+import io.slinkydeveloper.events.persistence.EventPersistenceManager;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.time.Duration;
@@ -19,18 +18,28 @@ import java.time.ZonedDateTime;
 import static org.junit.jupiter.api.Assertions.*;
 
 @ExtendWith(VertxExtension.class)
-public class EventManagerTest {
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
+public abstract class BaseEventManagerIntegrationTest<T extends EventPersistenceManager> {
 
   EventManagerImpl eventManager;
-  InMemoryEventPersistenceManager persistance;
+  T persistance;
   EventLogicManager logicManager;
 
-  @BeforeEach
+  public abstract T loadPersistenceManager(Vertx vertx);
+  public abstract void wipePersistence(T persistance, VertxTestContext testContext);
+
+  @BeforeAll
   void before(Vertx vertx, VertxTestContext testContext) {
-    this.persistance = new InMemoryEventPersistenceManager();
+    this.persistance = loadPersistenceManager(vertx);
     this.logicManager = EventLogicManager.create();
     this.eventManager = new EventManagerImpl(vertx, persistance, logicManager);
-    testContext.completeNow();
+    wipePersistence(this.persistance, testContext);
+  }
+
+  @AfterEach
+  void wipe(VertxTestContext testContext) {
+    this.eventManager.stop();
+    wipePersistence(persistance, testContext);
   }
 
   @Test
@@ -38,7 +47,8 @@ public class EventManagerTest {
     this.eventManager.start(test.succeeding((v) -> {
       Checkpoint eventHandlerCheckpoint = test.strictCheckpoint();
       Checkpoint eventCreationCheckpoint = test.strictCheckpoint();
-      Checkpoint retrieveResult = test.strictCheckpoint();
+      Checkpoint eventQueryAfterCompleted = test.strictCheckpoint();
+      Checkpoint eventQueryBeforeCompleted = test.strictCheckpoint();
 
       this.logicManager.addEventType("anEvent", e -> {
         test.verify(() -> assertEquals(EventState.RUNNING, e.getState()));
@@ -55,17 +65,18 @@ public class EventManagerTest {
 
       this.eventManager.registerEvent(event, test.succeeding(eventId -> {
         test.verify(() -> assertNotNull(eventId));
-        test.verify(() -> assertTrue(this.persistance.getEventsMap().containsKey(eventId)));
-        test.verify(() -> assertEquals(EventState.PENDING, this.persistance.getEventsMap().get(eventId).getState()));
         eventCreationCheckpoint.flag();
-        vertx.setTimer(1000, id -> {
-          this.eventManager.getEvent(eventId, test.succeeding(res -> {
-            test.verify(() -> assertEquals(new JsonObject().put("key", "result"), res.getEventResult()));
-            test.verify(() -> assertEquals(new JsonObject().put("key", "result"), this.persistance.getEventsMap().get(eventId).getEventResult()));
-            test.verify(() -> assertEquals(EventState.COMPLETED, this.persistance.getEventsMap().get(eventId).getState()));
-            retrieveResult.flag();
-          }));
-        });
+        this.eventManager.getEvent(eventId, test.succeeding(res1 -> {
+          test.verify(() -> assertEquals(EventState.PENDING, res1.getState()));
+          eventQueryBeforeCompleted.flag();
+          vertx.setTimer(1000, id -> {
+            this.eventManager.getEvent(eventId, test.succeeding(res2 -> {
+              test.verify(() -> assertEquals(new JsonObject().put("key", "result"), res2.getEventResult()));
+              test.verify(() -> assertEquals(EventState.COMPLETED, res2.getState()));
+              eventQueryAfterCompleted.flag();
+            }));
+          });
+        }));
       }));
     }));
   }
@@ -75,7 +86,8 @@ public class EventManagerTest {
     this.eventManager.start(test.succeeding((v) -> {
       Checkpoint eventHandlerCheckpoint = test.strictCheckpoint();
       Checkpoint eventCreationCheckpoint = test.strictCheckpoint();
-      Checkpoint retrieveResult = test.strictCheckpoint();
+      Checkpoint eventQueryAfterCompleted = test.strictCheckpoint();
+      Checkpoint eventQueryBeforeCompleted = test.strictCheckpoint();
 
       this.logicManager.addEventType("anEvent", e -> {
         eventHandlerCheckpoint.flag();
@@ -91,17 +103,18 @@ public class EventManagerTest {
 
       this.eventManager.registerEvent(event, test.succeeding(eventId -> {
         test.verify(() -> assertNotNull(eventId));
-        test.verify(() -> assertTrue(this.persistance.getEventsMap().containsKey(eventId)));
-        test.verify(() -> assertEquals(EventState.PENDING, this.persistance.getEventsMap().get(eventId).getState()));
         eventCreationCheckpoint.flag();
-        vertx.setTimer(1000, id -> {
-          this.eventManager.getEvent(eventId, test.succeeding(res -> {
-            test.verify(() -> assertEquals("Sbam", this.persistance.getEventsMap().get(eventId).getEventError().getMessage()));
-            test.verify(() -> assertEquals("Sbam", res.getEventError().getMessage()));
-            test.verify(() -> assertEquals(EventState.ERROR, res.getState()));
-            retrieveResult.flag();
-          }));
-        });
+        this.eventManager.getEvent(eventId, test.succeeding(res1 -> {
+          test.verify(() -> assertEquals(EventState.PENDING, res1.getState()));
+          eventQueryBeforeCompleted.flag();
+          vertx.setTimer(1000, id -> {
+            this.eventManager.getEvent(eventId, test.succeeding(res2 -> {
+              test.verify(() -> assertEquals("Sbam", res2.getEventError().getMessage()));
+              test.verify(() -> assertEquals(EventState.ERROR, res2.getState()));
+              eventQueryAfterCompleted.flag();
+            }));
+          });
+        }));
       }));
     }));
   }
@@ -112,6 +125,7 @@ public class EventManagerTest {
       Checkpoint eventCreationCheckpoint = test.strictCheckpoint();
       Checkpoint deleteEvent = test.strictCheckpoint();
       Checkpoint afterDelete = test.strictCheckpoint();
+      Checkpoint afterDeleteQuery = test.strictCheckpoint();
 
       this.logicManager.addEventType("anEvent", e -> {
         test.failNow(new IllegalStateException("Must never be called"));
@@ -127,14 +141,15 @@ public class EventManagerTest {
 
       this.eventManager.registerEvent(event, test.succeeding(eventId -> {
         test.verify(() -> assertNotNull(eventId));
-        test.verify(() -> assertTrue(this.persistance.getEventsMap().containsKey(eventId)));
-        test.verify(() -> assertEquals(EventState.PENDING, this.persistance.getEventsMap().get(eventId).getState()));
         eventCreationCheckpoint.flag();
         this.eventManager.unregisterEvent(eventId, test.succeeding(r -> {
-          test.verify(() -> assertFalse(this.persistance.getEventsMap().containsKey(eventId)));
-          test.verify(() -> assertFalse(this.eventManager.timersId.containsKey(eventId)));
+          test.verify(() -> assertFalse(this.eventManager.getTimersId().containsKey(eventId)));
           deleteEvent.flag();
-          vertx.setTimer(2000, id -> {
+          this.eventManager.getEvent(eventId, test.succeeding(e -> {
+            test.verify(() -> assertNull(e));
+            afterDeleteQuery.flag();
+          }));
+          vertx.setTimer(2000, id -> { // Wait to check if the event is triggered
             afterDelete.flag();
           });
         }));
@@ -148,7 +163,8 @@ public class EventManagerTest {
       Checkpoint eventHandler = test.strictCheckpoint();
       Checkpoint eventRegister = test.strictCheckpoint();
       Checkpoint restart = test.strictCheckpoint();
-      Checkpoint eventsCheck = test.strictCheckpoint();
+      Checkpoint starvingEventCheck = test.strictCheckpoint();
+      Checkpoint completedEventCheck = test.strictCheckpoint();
 
       this.logicManager.addEventType("anEvent", e -> {
         test.verify(() -> assertEquals(EventState.RUNNING, e.getState()));
@@ -171,11 +187,16 @@ public class EventManagerTest {
         this.persistance.addEvent(baitEvent).setHandler(test.succeeding(baitEventAdded -> {
           this.eventManager.start(test.succeeding(v2 -> {
             restart.flag();
-            test.verify(() -> assertEquals(1, this.eventManager.timersId.size()));
+            test.verify(() -> assertEquals(1, this.eventManager.getTimersId().size()));
             vertx.setTimer(1000, l -> {
-              test.verify(() -> assertEquals(EventState.STARVING, this.persistance.getEventsMap().get(baitEventAdded.getId()).getState()));
-              test.verify(() -> assertEquals(EventState.COMPLETED, this.persistance.getEventsMap().get(event.getId()).getState()));
-              eventsCheck.flag();
+              this.persistance.getEvent(event.getId()).setHandler(test.succeeding(e -> {
+                test.verify(() -> assertEquals(EventState.COMPLETED, e.getState()));
+                completedEventCheck.flag();
+              }));
+              this.persistance.getEvent(baitEventAdded.getId()).setHandler(test.succeeding(e -> {
+                test.verify(() -> assertEquals(EventState.STARVING, e.getState()));
+                starvingEventCheck.flag();
+              }));
             });
           }));
         }));

@@ -22,7 +22,7 @@ public class EventManagerImpl implements EventManagerAdmin {
   private EventPersistenceManager persistance;
   private EventLogicManager logicManager;
 
-  final protected Map<String, Long> timersId;
+  final private Map<String, Long> timersId;
 
   private AtomicBoolean isRunning;
 
@@ -175,6 +175,10 @@ public class EventManagerImpl implements EventManagerAdmin {
             log.error("Cannot update event " + eventId + ": " + ar.cause());
           }
         });
+  }
+
+  public Map<String, Long> getTimersId() {
+    return timersId;
   }
 
   private boolean isPast(ZonedDateTime d) {

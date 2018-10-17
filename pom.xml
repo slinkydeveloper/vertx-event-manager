@@ -45,6 +45,7 @@
     <modules>
         <module>vertx-event-manager-api</module>
         <module>vertx-event-manager-core</module>
+        <module>vertx-event-manager-mongodb</module>
     </modules>
 
     <build>

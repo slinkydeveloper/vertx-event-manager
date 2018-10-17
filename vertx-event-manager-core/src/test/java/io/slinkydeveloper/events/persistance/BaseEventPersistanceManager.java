@@ -7,6 +7,7 @@ import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
+import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import org.junit.jupiter.api.BeforeEach;
@@ -21,9 +22,6 @@ import java.util.function.Function;
 public abstract class BaseEventPersistanceManager {
 
   public EventPersistanceManager persistance;
-
-  @BeforeEach
-  public abstract void before(Vertx vertx, VertxTestContext testContext);
 
   @Test
   void addEvent(VertxTestContext test) {
@@ -73,6 +71,9 @@ public abstract class BaseEventPersistanceManager {
 
   @Test
   void deleteEvent(VertxTestContext test) {
+    Checkpoint deletedEvent = test.strictCheckpoint();
+    Checkpoint baitEvent = test.strictCheckpoint();
+
     Event event = Event.createCompletedEvent(
         ZonedDateTime.now(),
         ZonedDateTime.now().plusHours(1),
@@ -81,13 +82,27 @@ public abstract class BaseEventPersistanceManager {
         new JsonObject().put("someData", "someValue"),
         new JsonObject().put("someResults", "someValue")
     );
-    persistance.addEvent(event).setHandler(test.succeeding(pushedEvent ->
-        persistance.deleteEvent(pushedEvent.getId()).setHandler(test.succeeding(res ->
-            persistance.getEvent(pushedEvent.getId()).setHandler(test.succeeding(retrievedEvent -> {
-              assertNull(retrievedEvent);
-              test.completeNow();
-            }))
-        ))
+
+    Event bait = Event.createCompletedEvent(
+        ZonedDateTime.now(),
+        ZonedDateTime.now().plusHours(1),
+        ZonedDateTime.now().plusHours(2),
+        "superEvent2",
+        new JsonObject().put("someData", "someValue"),
+        new JsonObject().put("someResults", "someValue")
+    );
+    CompositeFuture.all(persistance.addEvent(event), persistance.addEvent(bait)).setHandler(test.succeeding(cf ->
+        persistance.deleteEvent(((Event)cf.resultAt(0)).getId()).setHandler(test.succeeding(res -> {
+          persistance.getEvent(((Event) cf.resultAt(0)).getId()).setHandler(test.succeeding(retrievedEvent -> {
+            test.verify(() -> assertNull(retrievedEvent));
+            deletedEvent.flag();
+          }));
+          persistance.getEvent(((Event) cf.resultAt(1)).getId()).setHandler(test.succeeding(retrievedEvent -> {
+            test.verify(() -> assertNotNull(retrievedEvent));
+            test.verify(() -> assertEquals("superEvent2", retrievedEvent.getEventType()));
+            baitEvent.flag();
+          }));
+        }))
     ));
   }
 
@@ -293,9 +308,9 @@ public abstract class BaseEventPersistanceManager {
         .compose(res -> persistance.getAllEvents())
         .recover(this.assertNotFail(test))
         .compose(events -> {
-          assertTrue(events.stream().anyMatch(e -> "superEventOfFirstType".equals(e.getEventType())));
-          assertTrue(events.stream().noneMatch(e -> "superEventOfSecondType".equals(e.getEventType())));
-          assertTrue(events.stream().anyMatch(e -> "superEventOfThirdType".equals(e.getEventType())));
+          test.verify(() -> assertTrue(events.stream().anyMatch(e -> "superEventOfFirstType".equals(e.getEventType()))));
+          test.verify(() -> assertTrue(events.stream().noneMatch(e -> "superEventOfSecondType".equals(e.getEventType()))));
+          test.verify(() -> assertTrue(events.stream().anyMatch(e -> "superEventOfThirdType".equals(e.getEventType()))));
           return this.completeNow(test);
         });
   }

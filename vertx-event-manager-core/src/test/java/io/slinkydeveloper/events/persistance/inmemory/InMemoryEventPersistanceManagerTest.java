@@ -14,7 +14,7 @@ import java.util.concurrent.TimeUnit;
 @ExtendWith(VertxExtension.class)
 @Timeout(value = 100, timeUnit = TimeUnit.MILLISECONDS)
 public class InMemoryEventPersistanceManagerTest extends BaseEventPersistanceManager {
-  @Override
+
   @BeforeEach
   public void before(Vertx vertx, VertxTestContext testContext) {
     this.persistance = new InMemoryEventPersistanceManager();

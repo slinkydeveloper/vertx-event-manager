@@ -38,6 +38,17 @@ public class Event {
     this.state = state;
   }
 
+  public Event(Event other) {
+    this.creationDateTime = other.creationDateTime;
+    this.triggerDateTime = other.triggerDateTime;
+    this.completionDateTime = other.completionDateTime;
+    this.eventType = other.eventType;
+    this.eventData = other.eventData;
+    this.eventResult = other.eventResult;
+    this.eventError = other.eventError;
+    this.state = other.state;
+  }
+
   public Event(JsonObject object) {
     this();
     EventConverter.fromJson(object, this);
@@ -140,6 +151,10 @@ public class Event {
   public Event setState(EventState state) {
     this.state = state;
     return this;
+  }
+
+  public Event copy() {
+    return new Event(this);
   }
 
   @Override

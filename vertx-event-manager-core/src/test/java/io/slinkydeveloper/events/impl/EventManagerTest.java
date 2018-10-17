@@ -1,6 +1,8 @@
 package io.slinkydeveloper.events.impl;
 
 import io.slinkydeveloper.events.*;
+import io.slinkydeveloper.events.logic.EventLogicManager;
+import io.slinkydeveloper.events.persistance.inmemory.InMemoryEventPersistanceManager;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
@@ -27,7 +29,7 @@ public class EventManagerTest {
   void before(Vertx vertx, VertxTestContext testContext) {
     this.persistance = new InMemoryEventPersistanceManager();
     this.logicManager = EventLogicManager.create();
-    this.eventManager = (EventManagerImpl) EventManagerAdmin.createEventManager(vertx, persistance, logicManager);
+    this.eventManager = new EventManagerImpl(vertx, persistance, logicManager);
     testContext.completeNow();
   }
 
@@ -53,14 +55,15 @@ public class EventManagerTest {
 
       this.eventManager.registerEvent(event, test.succeeding(eventId -> {
         test.verify(() -> assertNotNull(eventId));
-        test.verify(() -> assertTrue(this.persistance.eventsMap.containsKey(eventId)));
-        test.verify(() -> assertEquals(EventState.PENDING, this.persistance.eventsMap.get(eventId).getState()));
+
+        test.verify(() -> assertTrue(this.persistance.getEventsMap().containsKey(eventId)));
+        test.verify(() -> assertEquals(EventState.PENDING, this.persistance.getEventsMap().get(eventId).getState()));
         eventCreationCheckpoint.flag();
         vertx.setTimer(1000, id -> {
           this.eventManager.getEvent(eventId, test.succeeding(res -> {
-            test.verify(() -> assertEquals(new JsonObject().put("key", "result"), this.persistance.eventsMap.get(eventId).getEventResult()));
+            test.verify(() -> assertEquals(new JsonObject().put("key", "result"), this.persistance.getEventsMap().get(eventId).getEventResult()));
             test.verify(() -> assertEquals(new JsonObject().put("key", "result"), res.getEventResult()));
-            test.verify(() -> assertEquals(EventState.COMPLETED, this.persistance.eventsMap.get(eventId).getState()));
+            test.verify(() -> assertEquals(EventState.COMPLETED, this.persistance.getEventsMap().get(eventId).getState()));
             retrieveResult.flag();
           }));
         });
@@ -89,12 +92,12 @@ public class EventManagerTest {
 
       this.eventManager.registerEvent(event, test.succeeding(eventId -> {
         test.verify(() -> assertNotNull(eventId));
-        test.verify(() -> assertTrue(this.persistance.eventsMap.containsKey(eventId)));
-        test.verify(() -> assertEquals(EventState.PENDING, this.persistance.eventsMap.get(eventId).getState()));
+        test.verify(() -> assertTrue(this.persistance.getEventsMap().containsKey(eventId)));
+        test.verify(() -> assertEquals(EventState.PENDING, this.persistance.getEventsMap().get(eventId).getState()));
         eventCreationCheckpoint.flag();
         vertx.setTimer(1000, id -> {
           this.eventManager.getEvent(eventId, test.succeeding(res -> {
-            test.verify(() -> assertEquals("Sbam", this.persistance.eventsMap.get(eventId).getEventError().getMessage()));
+            test.verify(() -> assertEquals("Sbam", this.persistance.getEventsMap().get(eventId).getEventError().getMessage()));
             test.verify(() -> assertEquals("Sbam", res.getEventError().getMessage()));
             test.verify(() -> assertEquals(EventState.ERROR, res.getState()));
             retrieveResult.flag();
@@ -125,11 +128,11 @@ public class EventManagerTest {
 
       this.eventManager.registerEvent(event, test.succeeding(eventId -> {
         test.verify(() -> assertNotNull(eventId));
-        test.verify(() -> assertTrue(this.persistance.eventsMap.containsKey(eventId)));
-        test.verify(() -> assertEquals(EventState.PENDING, this.persistance.eventsMap.get(eventId).getState()));
+        test.verify(() -> assertTrue(this.persistance.getEventsMap().containsKey(eventId)));
+        test.verify(() -> assertEquals(EventState.PENDING, this.persistance.getEventsMap().get(eventId).getState()));
         eventCreationCheckpoint.flag();
         this.eventManager.unregisterEvent(eventId, test.succeeding(r -> {
-          test.verify(() -> assertFalse(this.persistance.eventsMap.containsKey(eventId)));
+          test.verify(() -> assertFalse(this.persistance.getEventsMap().containsKey(eventId)));
           test.verify(() -> assertFalse(this.eventManager.timersId.containsKey(eventId)));
           deleteEvent.flag();
           vertx.setTimer(2000, id -> {
@@ -171,8 +174,8 @@ public class EventManagerTest {
             restart.flag();
             test.verify(() -> assertEquals(1, this.eventManager.timersId.size()));
             vertx.setTimer(1000, l -> {
-              test.verify(() -> assertEquals(EventState.STARVING, this.persistance.eventsMap.get(baitEventAdded.getId()).getState()));
-              test.verify(() -> assertEquals(EventState.COMPLETED, this.persistance.eventsMap.get(event.getId()).getState()));
+              test.verify(() -> assertEquals(EventState.STARVING, this.persistance.getEventsMap().get(baitEventAdded.getId()).getState()));
+              test.verify(() -> assertEquals(EventState.COMPLETED, this.persistance.getEventsMap().get(event.getId()).getState()));
               eventsCheck.flag();
             });
           }));

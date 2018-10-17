@@ -1,5 +1,7 @@
-package io.slinkydeveloper.events;
+package io.slinkydeveloper.events.persistance;
 
+import io.slinkydeveloper.events.Event;
+import io.slinkydeveloper.events.EventState;
 import io.vertx.core.Future;
 
 import java.time.ZonedDateTime;

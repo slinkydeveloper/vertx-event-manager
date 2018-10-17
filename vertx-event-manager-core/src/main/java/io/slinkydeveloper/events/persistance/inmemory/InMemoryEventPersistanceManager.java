@@ -1,7 +1,7 @@
-package io.slinkydeveloper.events.impl;
+package io.slinkydeveloper.events.persistance.inmemory;
 
 import io.slinkydeveloper.events.Event;
-import io.slinkydeveloper.events.EventPersistanceManager;
+import io.slinkydeveloper.events.persistance.EventPersistanceManager;
 import io.slinkydeveloper.events.EventState;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
@@ -67,6 +67,10 @@ public class InMemoryEventPersistanceManager implements EventPersistanceManager 
           eventsToRemove.stream().map(e -> this.deleteEvent(e.getId())).collect(Collectors.toList())
       ).map(eventsToRemove);
     });
+  }
+
+  public Map<String, Event> getEventsMap() {
+    return eventsMap;
   }
 
   private String generateEventId() {

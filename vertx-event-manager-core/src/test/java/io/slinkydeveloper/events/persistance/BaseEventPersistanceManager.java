@@ -1,7 +1,7 @@
-package io.slinkydeveloper.events.impl;
+package io.slinkydeveloper.events.persistance;
 
 import io.slinkydeveloper.events.Event;
-import io.slinkydeveloper.events.EventPersistanceManager;
+import io.slinkydeveloper.events.persistance.EventPersistanceManager;
 import io.slinkydeveloper.events.EventState;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
@@ -20,10 +20,10 @@ import java.util.function.Function;
 @ExtendWith(VertxExtension.class)
 public abstract class BaseEventPersistanceManager {
 
-  EventPersistanceManager persistance;
+  public EventPersistanceManager persistance;
 
   @BeforeEach
-  abstract void before(Vertx vertx, VertxTestContext testContext);
+  public abstract void before(Vertx vertx, VertxTestContext testContext);
 
   @Test
   void addEvent(VertxTestContext test) {

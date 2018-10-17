@@ -1,5 +1,7 @@
-package io.slinkydeveloper.events.impl;
+package io.slinkydeveloper.events.persistance.inmemory;
 
+import io.slinkydeveloper.events.persistance.BaseEventPersistanceManager;
+import io.slinkydeveloper.events.persistance.inmemory.InMemoryEventPersistanceManager;
 import io.vertx.core.Vertx;
 import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxExtension;
@@ -14,7 +16,7 @@ import java.util.concurrent.TimeUnit;
 public class InMemoryEventPersistanceManagerTest extends BaseEventPersistanceManager {
   @Override
   @BeforeEach
-  void before(Vertx vertx, VertxTestContext testContext) {
+  public void before(Vertx vertx, VertxTestContext testContext) {
     this.persistance = new InMemoryEventPersistanceManager();
     testContext.completeNow();
   }

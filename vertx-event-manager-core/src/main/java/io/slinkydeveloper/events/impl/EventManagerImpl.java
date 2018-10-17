@@ -1,8 +1,9 @@
 package io.slinkydeveloper.events.impl;
 
 import io.slinkydeveloper.events.*;
+import io.slinkydeveloper.events.logic.EventLogicManager;
+import io.slinkydeveloper.events.persistance.EventPersistanceManager;
 import io.vertx.core.*;
-import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 
@@ -12,7 +13,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.stream.Collectors;
 
 public class EventManagerImpl implements EventManagerAdmin {
 

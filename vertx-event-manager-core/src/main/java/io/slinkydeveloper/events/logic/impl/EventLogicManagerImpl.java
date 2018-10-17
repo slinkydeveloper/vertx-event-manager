@@ -1,7 +1,7 @@
-package io.slinkydeveloper.events.impl;
+package io.slinkydeveloper.events.logic.impl;
 
 import io.slinkydeveloper.events.Event;
-import io.slinkydeveloper.events.EventLogicManager;
+import io.slinkydeveloper.events.logic.EventLogicManager;
 import io.vertx.codegen.annotations.Fluent;
 import io.vertx.codegen.annotations.VertxGen;
 import io.vertx.core.json.JsonObject;

@@ -1,6 +1,5 @@
 package io.slinkydeveloper.events;
 
-import io.slinkydeveloper.events.impl.EventManagerImpl;
 import io.vertx.codegen.annotations.ProxyGen;
 import io.vertx.codegen.annotations.ProxyIgnore;
 import io.vertx.codegen.annotations.VertxGen;
@@ -22,10 +21,6 @@ public interface EventManagerAdmin extends EventManager {
   void getEventsFilteredByState(EventState state, Handler<AsyncResult<List<Event>>> resultHandler);
   void start(Handler<AsyncResult<Void>> resultHandler);
   void stop();
-
-  static EventManager createEventManager(Vertx vertx, EventPersistanceManager eventPersistanceManager, EventLogicManager eventLogicManager) {
-    return new EventManagerImpl(vertx, eventPersistanceManager, eventLogicManager);
-  }
 
   static EventManagerAdmin createProxy(Vertx vertx, String address, DeliveryOptions options) {
     return new EventManagerAdminVertxEBProxy(vertx, address, options);

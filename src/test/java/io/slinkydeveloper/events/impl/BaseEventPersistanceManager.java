@@ -2,6 +2,7 @@ package io.slinkydeveloper.events.impl;
 
 import io.slinkydeveloper.events.Event;
 import io.slinkydeveloper.events.EventPersistanceManager;
+import io.slinkydeveloper.events.EventState;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
@@ -28,12 +29,13 @@ public abstract class BaseEventPersistanceManager {
   void addEvent(VertxTestContext test) {
     Event event = Event.createPendingEvent(
         ZonedDateTime.now(),
+        ZonedDateTime.now(),
         "superEvent",
         new JsonObject().put("someData", "someValue")
     );
     persistance.addEvent(event).setHandler(test.succeeding(newEvent -> {
       assertNotNull(newEvent.getId());
-      assertNull(newEvent.getTriggerDateTime());
+      assertNotNull(newEvent.getTriggerDateTime());
       assertNull(newEvent.getCompletionDateTime());
       assertEquals(event.getCreationDateTime(), newEvent.getCreationDateTime());
       assertNull(newEvent.getEventResult());
@@ -115,15 +117,18 @@ public abstract class BaseEventPersistanceManager {
   void getAllEvents(VertxTestContext test) {
     Event event1 = Event.createPendingEvent(
         ZonedDateTime.now(),
+        ZonedDateTime.now(),
         "superEventOfFirstType",
         new JsonObject().put("someData", "someValue")
     );
     Event event2 = Event.createPendingEvent(
         ZonedDateTime.now(),
+        ZonedDateTime.now(),
         "superEventOfSecondType",
         new JsonObject().put("someData", "someValue")
     );
     Event event3 = Event.createPendingEvent(
+        ZonedDateTime.now(),
         ZonedDateTime.now(),
         "superEventOfThirdType",
         new JsonObject().put("someData", "someValue")
@@ -147,6 +152,7 @@ public abstract class BaseEventPersistanceManager {
   void getPendingEvents(VertxTestContext test) {
     Event event1 = Event.createPendingEvent( // Pending event
         ZonedDateTime.now(),
+        ZonedDateTime.now().plusHours(1),
         "superEventOfFirstType",
         new JsonObject().put("someData", "someValue")
     );
@@ -169,7 +175,7 @@ public abstract class BaseEventPersistanceManager {
         persistance.addEvent(event2),
         persistance.addEvent(event3)
     ).recover(this.assertNotFail(test))
-        .compose(res -> persistance.getPendingEvents())
+        .compose(res -> persistance.getEventsFilteredByState(EventState.PENDING))
         .recover(this.assertNotFail(test))
         .compose(events -> {
           assertTrue(events.stream().anyMatch(e -> "superEventOfFirstType".equals(e.getEventType())));
@@ -183,6 +189,7 @@ public abstract class BaseEventPersistanceManager {
   void getRunningEvents(VertxTestContext test) {
     Event event1 = Event.createPendingEvent( // Pending event
         ZonedDateTime.now(),
+        ZonedDateTime.now().plusHours(1),
         "superEventOfFirstType",
         new JsonObject().put("someData", "someValue")
     );
@@ -205,7 +212,7 @@ public abstract class BaseEventPersistanceManager {
         persistance.addEvent(event2),
         persistance.addEvent(event3)
     ).recover(this.assertNotFail(test))
-        .compose(res -> persistance.getRunningEvents())
+        .compose(res -> persistance.getEventsFilteredByState(EventState.RUNNING))
         .recover(this.assertNotFail(test))
         .compose(events -> {
           assertTrue(events.stream().noneMatch(e -> "superEventOfFirstType".equals(e.getEventType())));
@@ -219,6 +226,7 @@ public abstract class BaseEventPersistanceManager {
   void getCompletedEvents(VertxTestContext test) {
     Event event1 = Event.createPendingEvent( // Pending event
         ZonedDateTime.now(),
+        ZonedDateTime.now().plusHours(1),
         "superEventOfFirstType",
         new JsonObject().put("someData", "someValue")
     );
@@ -241,7 +249,7 @@ public abstract class BaseEventPersistanceManager {
         persistance.addEvent(event2),
         persistance.addEvent(event3)
     ).recover(this.assertNotFail(test))
-        .compose(res -> persistance.getCompletedEvents())
+        .compose(res -> persistance.getEventsFilteredByState(EventState.COMPLETED))
         .recover(this.assertNotFail(test))
         .compose(events -> {
           assertTrue(events.stream().noneMatch(e -> "superEventOfFirstType".equals(e.getEventType())));
@@ -255,6 +263,7 @@ public abstract class BaseEventPersistanceManager {
   void cleanEventsCompletedBefore(VertxTestContext test) {
     Event event1 = Event.createPendingEvent( // Pending event
         ZonedDateTime.now(),
+        ZonedDateTime.now().plusHours(1),
         "superEventOfFirstType",
         new JsonObject().put("someData", "someValue")
     );

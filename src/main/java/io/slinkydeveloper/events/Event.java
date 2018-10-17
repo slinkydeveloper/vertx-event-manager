@@ -8,26 +8,34 @@ import io.vertx.core.json.JsonObject;
 import java.time.ZonedDateTime;
 import java.util.Objects;
 
+/**
+ * Different Event
+ *
+ */
 @DataObject(generateConverter = true)
 public class Event {
 
-  String id;
-  ZonedDateTime creationDateTime;
-  ZonedDateTime triggerDateTime;
-  ZonedDateTime completionDateTime;
-  String eventType;
-  JsonObject eventData;
-  JsonObject eventResult;
+  private String id;
+  private ZonedDateTime creationDateTime;
+  private ZonedDateTime triggerDateTime;
+  private ZonedDateTime completionDateTime;
+  private String eventType;
+  private JsonObject eventData;
+  private JsonObject eventResult;
+  private Throwable eventError;
+  private EventState state;
 
   public Event(){}
 
-  protected Event(ZonedDateTime creationDateTime, ZonedDateTime triggerDateTime, ZonedDateTime completionDateTime, String eventType, JsonObject eventData, JsonObject eventResult) {
+  public Event(ZonedDateTime creationDateTime, ZonedDateTime triggerDateTime, ZonedDateTime completionDateTime, String eventType, JsonObject eventData, JsonObject eventResult, Throwable eventError, EventState state) {
     this.creationDateTime = creationDateTime;
     this.triggerDateTime = triggerDateTime;
     this.completionDateTime = completionDateTime;
     this.eventType = eventType;
     this.eventData = eventData;
     this.eventResult = eventResult;
+    this.eventError = eventError;
+    this.state = state;
   }
 
   public Event(JsonObject object) {
@@ -51,9 +59,7 @@ public class Event {
     return this;
   }
 
-  @Nullable
   public String getCreationDateTime() {
-    if (creationDateTime == null) return null;
     return creationDateTime.toString();
   }
 
@@ -63,9 +69,7 @@ public class Event {
     return this;
   }
 
-  @Nullable
   public String getTriggerDateTime() {
-    if (triggerDateTime == null) return null;
     return triggerDateTime.toString();
   }
 
@@ -118,6 +122,26 @@ public class Event {
     return this;
   }
 
+  public Throwable getEventError() {
+    return eventError;
+  }
+
+  @Fluent
+  public Event setEventError(Throwable eventError) {
+    this.eventError = eventError;
+    return this;
+  }
+
+  public EventState getState() {
+    return state;
+  }
+
+  @Fluent
+  public Event setState(EventState state) {
+    this.state = state;
+    return this;
+  }
+
   @Override
   public boolean equals(Object o) {
     if (this == o) return true;
@@ -129,24 +153,25 @@ public class Event {
         Objects.equals(getCompletionDateTime(), event.getCompletionDateTime()) &&
         Objects.equals(getEventType(), event.getEventType()) &&
         Objects.equals(getEventData(), event.getEventData()) &&
-        Objects.equals(getEventResult(), event.getEventResult());
+        Objects.equals(getEventResult(), event.getEventResult()) &&
+        getState() == event.getState();
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(getId(), getCreationDateTime(), getTriggerDateTime(), getCompletionDateTime(), getEventType(), getEventData(), getEventResult());
+    return Objects.hash(getId(), getCreationDateTime(), getTriggerDateTime(), getCompletionDateTime(), getEventType(), getEventData(), getEventResult(), getState());
   }
 
-  public static Event createPendingEvent(ZonedDateTime creationDateTime, String eventType, JsonObject eventData) {
-    return new Event(creationDateTime, null, null, eventType, eventData, null);
+  public static Event createPendingEvent(ZonedDateTime creationDateTime, ZonedDateTime triggerDateTime, String eventType, JsonObject eventData) {
+    return new Event(creationDateTime, triggerDateTime, null, eventType, eventData, null, null, EventState.PENDING);
   }
 
   public static Event createRunningEvent(ZonedDateTime creationDateTime, ZonedDateTime triggerDateTime, String eventType, JsonObject eventData) {
-    return new Event(creationDateTime, triggerDateTime, null, eventType, eventData, null);
+    return new Event(creationDateTime, triggerDateTime, null, eventType, eventData, null, null, EventState.RUNNING);
   }
 
   public static Event createCompletedEvent(ZonedDateTime creationDateTime, ZonedDateTime triggerDateTime, ZonedDateTime completionDateTime, String eventType, JsonObject eventData, JsonObject eventResult) {
-    return new Event(creationDateTime, triggerDateTime, completionDateTime, eventType, eventData, eventResult);
+    return new Event(creationDateTime, triggerDateTime, completionDateTime, eventType, eventData, eventResult, null,  EventState.COMPLETED);
   }
 
 }

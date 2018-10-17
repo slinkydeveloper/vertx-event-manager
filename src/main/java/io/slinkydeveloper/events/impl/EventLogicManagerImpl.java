@@ -8,7 +8,7 @@ import io.vertx.core.json.JsonObject;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.Future;
+import io.vertx.core.Future;
 import java.util.function.Function;
 
 @VertxGen
@@ -29,7 +29,12 @@ public class EventLogicManagerImpl implements EventLogicManager {
 
   @Override
   public Future<JsonObject> runEvent(Event event) {
-    return this.eventLogicsMap.get(event.getEventType()).apply(event);
+    if (!this.eventLogicsMap.containsKey(event.getEventType()))
+      return Future.failedFuture(new IllegalStateException("EventLogicManager doesn't contain the event type " + event.getEventType()));
+    try {
+      return this.eventLogicsMap.get(event.getEventType()).apply(event);
+    } catch (Throwable e) {
+      return Future.failedFuture(e);
+    }
   }
-
 }

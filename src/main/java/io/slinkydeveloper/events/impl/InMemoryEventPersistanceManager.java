@@ -2,6 +2,7 @@ package io.slinkydeveloper.events.impl;
 
 import io.slinkydeveloper.events.Event;
 import io.slinkydeveloper.events.EventPersistanceManager;
+import io.slinkydeveloper.events.EventState;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 
@@ -12,7 +13,7 @@ import java.util.stream.Collectors;
 
 public class InMemoryEventPersistanceManager implements EventPersistanceManager {
 
-  Map<String, Event> eventsMap;
+  protected Map<String, Event> eventsMap;
 
   public InMemoryEventPersistanceManager() {
     this.eventsMap = new ConcurrentHashMap<>();
@@ -44,23 +45,10 @@ public class InMemoryEventPersistanceManager implements EventPersistanceManager 
   }
 
   @Override
-  public Future<List<Event>> getPendingEvents() {
+  public Future<List<Event>> getEventsFilteredByState(EventState state) {
+    Objects.requireNonNull(state);
     return Future.succeededFuture(
-        this.eventsMap.values().stream().filter(e -> e.getCreationDateTime() != null && e.getTriggerDateTime() == null && e.getCompletionDateTime() == null).collect(Collectors.toList())
-    );
-  }
-
-  @Override
-  public Future<List<Event>> getRunningEvents() {
-    return Future.succeededFuture(
-        this.eventsMap.values().stream().filter(e -> e.getCreationDateTime() != null && e.getTriggerDateTime() != null && e.getCompletionDateTime() == null).collect(Collectors.toList())
-    );
-  }
-
-  @Override
-  public Future<List<Event>> getCompletedEvents() {
-    return Future.succeededFuture(
-        this.eventsMap.values().stream().filter(e -> e.getCreationDateTime() != null && e.getTriggerDateTime() != null && e.getCompletionDateTime() != null).collect(Collectors.toList())
+        this.eventsMap.values().stream().filter(e -> e.getState().equals(state)).collect(Collectors.toList())
     );
   }
 
@@ -73,7 +61,7 @@ public class InMemoryEventPersistanceManager implements EventPersistanceManager 
 
   @Override
   public Future<List<Event>> cleanEventsCompletedBefore(ZonedDateTime before) {
-    return this.getCompletedEvents().compose(events -> {
+    return this.getEventsFilteredByState(EventState.COMPLETED).compose(events -> {
       List<Event> eventsToRemove = events.stream().filter(e -> before.compareTo(ZonedDateTime.parse(e.getCompletionDateTime())) >= 0).collect(Collectors.toList());
       return CompositeFuture.all(
           eventsToRemove.stream().map(e -> this.deleteEvent(e.getId())).collect(Collectors.toList())

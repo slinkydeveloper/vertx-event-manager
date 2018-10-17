@@ -11,9 +11,7 @@ public interface EventPersistanceManager {
   Future<Event> getEvent(String eventId);
   Future<Void> deleteEvent(String eventId);
   Future<Event> updateEvent(Event event);
-  Future<List<Event>> getPendingEvents();
-  Future<List<Event>> getRunningEvents();
-  Future<List<Event>> getCompletedEvents();
+  Future<List<Event>> getEventsFilteredByState(EventState state);
   Future<List<Event>> getAllEvents();
   Future<List<Event>> cleanEventsCompletedBefore(ZonedDateTime before);
 

@@ -4,7 +4,7 @@ import io.slinkydeveloper.events.impl.EventLogicManagerImpl;
 import io.vertx.codegen.annotations.Fluent;
 import io.vertx.core.json.JsonObject;
 
-import java.util.concurrent.Future;
+import io.vertx.core.Future;
 import java.util.function.Function;
 
 public interface EventLogicManager {

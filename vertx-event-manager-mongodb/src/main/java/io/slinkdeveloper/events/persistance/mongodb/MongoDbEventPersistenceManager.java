@@ -49,7 +49,7 @@ public class MongoDbEventPersistenceManager implements EventPersistenceManager {
   public Future<Event> updateEvent(Event event) {
     Future<JsonObject> res = Future.future();
     client.findOneAndReplace(this.collectionName, createIdQuery(event.getId()), event.toJson(), res.completer());
-    return res.map(this::buildEventFromJsonObject);
+    return res.map(event);
   }
 
   @Override
@@ -74,7 +74,7 @@ public class MongoDbEventPersistenceManager implements EventPersistenceManager {
           List<Event> toRemove = Stream.concat(
               ((List<Event>)cf.resultAt(0)).stream(),
               ((List<Event>)cf.resultAt(1)).stream()
-          ).filter(e -> before.compareTo(ZonedDateTime.parse(e.getCompletionDateTime())) >= 0).collect(Collectors.toList());
+          ).filter(e -> before.compareTo(e.getCompletionDateTimeDecoded()) >= 0).collect(Collectors.toList());
           JsonObject query = new JsonObject().put("_id", new JsonObject().put("$in", new JsonArray(
               toRemove.stream().map(Event::getId).collect(Collectors.toList())
           )));

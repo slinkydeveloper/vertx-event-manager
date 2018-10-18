@@ -109,8 +109,10 @@ public abstract class BaseEventManagerIntegrationTest<T extends EventPersistence
           eventQueryBeforeCompleted.flag();
           vertx.setTimer(1000, id -> {
             this.eventManager.getEvent(eventId, test.succeeding(res2 -> {
-              test.verify(() -> assertEquals("Sbam", res2.getEventError().getMessage()));
-              test.verify(() -> assertEquals(EventState.ERROR, res2.getState()));
+              test.verify(() -> {
+                assertEquals("Sbam", res2.getEventError().getString("message"));
+                assertEquals(EventState.ERROR, res2.getState());
+              });
               eventQueryAfterCompleted.flag();
             }));
           });
@@ -189,7 +191,7 @@ public abstract class BaseEventManagerIntegrationTest<T extends EventPersistence
             restart.flag();
             test.verify(() -> assertEquals(1, this.eventManager.getTimersId().size()));
             vertx.setTimer(1000, l -> {
-              this.persistance.getEvent(event.getId()).setHandler(test.succeeding(e -> {
+              this.persistance.getEvent(eventId).setHandler(test.succeeding(e -> {
                 test.verify(() -> assertEquals(EventState.COMPLETED, e.getState()));
                 completedEventCheck.flag();
               }));

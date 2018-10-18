@@ -62,7 +62,7 @@ public class InMemoryEventPersistenceManager implements EventPersistenceManager 
   @Override
   public Future<List<Event>> cleanEventsCompletedBefore(ZonedDateTime before) {
     return this.getEventsFilteredByState(EventState.COMPLETED).compose(events -> {
-      List<Event> eventsToRemove = events.stream().filter(e -> before.compareTo(ZonedDateTime.parse(e.getCompletionDateTime())) >= 0).collect(Collectors.toList());
+      List<Event> eventsToRemove = events.stream().filter(e -> before.compareTo(e.getCompletionDateTimeDecoded()) >= 0).collect(Collectors.toList());
       return CompositeFuture.all(
           eventsToRemove.stream().map(e -> this.deleteEvent(e.getId())).collect(Collectors.toList())
       ).map(eventsToRemove);

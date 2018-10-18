@@ -41,7 +41,7 @@ public class EventManagerImpl implements EventManagerAdmin {
     persistance.addEvent(event).setHandler(ar -> {
       if (ar.succeeded()) {
         String eventId = ar.result().getId();
-        if (isPast(ZonedDateTime.parse(ar.result().getTriggerDateTime()))) {
+        if (isPast(ar.result().getTriggerDateTimeDecoded())) {
           this.runEvent(eventId);
         } else {
           this.startTimer(ar.result());
@@ -130,7 +130,7 @@ public class EventManagerImpl implements EventManagerAdmin {
   private void startTimer(Event event) {
     final String eventId = event.getId();
     long timerId = vertx.setTimer(
-        zonedDateTimeDifference(ZonedDateTime.now(), ZonedDateTime.parse(event.getTriggerDateTime()), ChronoUnit.MILLIS),
+        zonedDateTimeDifference(ZonedDateTime.now(), event.getTriggerDateTimeDecoded(), ChronoUnit.MILLIS),
         l -> {
           synchronized (this.timersId) {
             this.timersId.remove(eventId);
@@ -168,7 +168,7 @@ public class EventManagerImpl implements EventManagerAdmin {
                     event
                         .setState(EventState.ERROR)
                         .setCompletionDateTime(ZonedDateTime.now().toString())
-                        .setEventError(runAr.cause()));
+                        .setEventErrorDecoded(runAr.cause()));
               }
             });
           } else {

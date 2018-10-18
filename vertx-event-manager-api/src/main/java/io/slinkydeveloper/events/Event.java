@@ -2,8 +2,10 @@ package io.slinkydeveloper.events;
 
 import io.vertx.codegen.annotations.DataObject;
 import io.vertx.codegen.annotations.Fluent;
+import io.vertx.codegen.annotations.GenIgnore;
 import io.vertx.codegen.annotations.Nullable;
 import io.vertx.core.json.JsonObject;
+import io.vertx.core.parsetools.JsonEvent;
 
 import java.time.ZonedDateTime;
 import java.util.Objects;
@@ -22,7 +24,7 @@ public class Event {
   private String eventType;
   private JsonObject eventData;
   private JsonObject eventResult;
-  private Throwable eventError;
+  private JsonObject eventError;
   private EventState state;
 
   public Event(){}
@@ -34,7 +36,7 @@ public class Event {
     this.eventType = eventType;
     this.eventData = eventData;
     this.eventResult = eventResult;
-    this.eventError = eventError;
+    this.eventError = encodeEventError(eventError);
     this.state = state;
   }
 
@@ -70,32 +72,55 @@ public class Event {
     return this;
   }
 
+  @GenIgnore public ZonedDateTime getCreationDateTimeDecoded() { return creationDateTime; }
   public String getCreationDateTime() {
     return creationDateTime.toString();
   }
 
+  @GenIgnore @Fluent
+  public Event setCreationDateTimeDecoded(ZonedDateTime creationDateTime) {
+    this.creationDateTime = creationDateTime;
+    return this;
+  }
   @Fluent
   public Event setCreationDateTime(String creationDateTime) {
     this.creationDateTime = ZonedDateTime.parse(creationDateTime);
     return this;
   }
 
+  @GenIgnore public ZonedDateTime getTriggerDateTimeDecoded() {
+    return triggerDateTime;
+  }
   public String getTriggerDateTime() {
     return triggerDateTime.toString();
   }
 
+  @GenIgnore @Fluent
+  public Event setTriggerDateTime(ZonedDateTime triggerDateTime) {
+    this.triggerDateTime = triggerDateTime;
+    return this;
+  }
   @Fluent
   public Event setTriggerDateTime(String triggerDateTime) {
     this.triggerDateTime = ZonedDateTime.parse(triggerDateTime);
     return this;
   }
 
+  @GenIgnore @Nullable
+  public ZonedDateTime getCompletionDateTimeDecoded() {
+    return completionDateTime;
+  }
   @Nullable
   public String getCompletionDateTime() {
     if (completionDateTime == null) return null;
     return completionDateTime.toString();
   }
 
+  @GenIgnore @Fluent
+  public Event setCompletionDateTime(ZonedDateTime completionDateTime) {
+    this.completionDateTime = completionDateTime;
+    return this;
+  }
   @Fluent
   public Event setCompletionDateTime(String completionDateTime) {
     this.completionDateTime = ZonedDateTime.parse(completionDateTime);
@@ -133,12 +158,26 @@ public class Event {
     return this;
   }
 
-  public Throwable getEventError() {
+  @GenIgnore @Fluent
+  public Event setEventErrorDecoded(Throwable eventError) {
+    this.eventError = encodeEventError(eventError);
+    return this;
+  }
+
+  private JsonObject encodeEventError(Throwable err) {
+    if (err == null) return null;
+    JsonObject jsonObject = new JsonObject();
+    jsonObject.put("fqcn", err.getClass().getCanonicalName());
+    jsonObject.put("message", err.getMessage());
+    return jsonObject;
+  }
+
+  public JsonObject getEventError() {
     return eventError;
   }
 
   @Fluent
-  public Event setEventError(Throwable eventError) {
+  public Event setEventError(JsonObject eventError) {
     this.eventError = eventError;
     return this;
   }

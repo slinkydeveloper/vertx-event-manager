@@ -17,21 +17,31 @@ import java.util.concurrent.TimeUnit;
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class MongoDbEventPersistenceManagerTest extends BaseEventPersistenceManager {
 
+  MongoDbRunner runner;
   MongoClient client;
 
   @BeforeAll
-  public void setup(Vertx vertx, VertxTestContext testContext) {
+  public void setup(Vertx vertx, VertxTestContext testContext) throws Exception {
+    this.runner = new MongoDbRunner();
+    this.runner.startMongo();
     this.client = MongoClient.createShared(
         vertx,
-        new JsonObject().put("db_name", "test").put("connection_string", "mongodb://127.0.0.1:27017")
+        this.runner.getConfig()
     );
-    this.persistance = new MongoDbEventPersistenceManager(client, "eventManager");
-    testContext.completeNow();
+    this.client.createCollection("eventManager", testContext.succeeding(ar -> {
+      this.persistance = new MongoDbEventPersistenceManager(client, "eventManager");
+      testContext.completeNow();
+    }));
   }
 
   @AfterEach
   public void wipeDb(Vertx vertx, VertxTestContext testContext) {
     this.client.remove("eventManager", new JsonObject(), testContext.succeeding(v -> testContext.completeNow()));
+  }
+
+  @AfterAll
+  public void stopDb() {
+    this.runner.stopMongo();
   }
 
 }

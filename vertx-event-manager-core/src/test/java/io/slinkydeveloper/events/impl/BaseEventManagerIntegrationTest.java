@@ -25,21 +25,27 @@ public abstract class BaseEventManagerIntegrationTest<T extends EventPersistence
   T persistance;
   EventLogicManager logicManager;
 
-  public abstract T loadPersistenceManager(Vertx vertx);
-  public abstract void wipePersistence(T persistance, VertxTestContext testContext);
+  public abstract Future<T> loadPersistenceManager(Vertx vertx) throws Exception;
+  public abstract void wipePersistence(T persistance, VertxTestContext testContext, Checkpoint persistenceWipedCheck);
 
   @BeforeAll
-  void before(Vertx vertx, VertxTestContext testContext) {
-    this.persistance = loadPersistenceManager(vertx);
-    this.logicManager = EventLogicManager.create();
-    this.eventManager = new EventManagerImpl(vertx, persistance, logicManager);
-    wipePersistence(this.persistance, testContext);
+  void before(Vertx vertx, VertxTestContext testContext) throws Exception {
+    Checkpoint persistenceWipedCheck = testContext.strictCheckpoint();
+
+    loadPersistenceManager(vertx).setHandler(testContext.succeeding(p -> {
+      this.persistance = p;
+      this.logicManager = EventLogicManager.create();
+      this.eventManager = new EventManagerImpl(vertx, persistance, logicManager);
+      wipePersistence(this.persistance, testContext, persistenceWipedCheck);
+    }));
   }
 
   @AfterEach
   void wipe(VertxTestContext testContext) {
+    Checkpoint persistenceWipedCheck = testContext.strictCheckpoint();
+
     this.eventManager.stop();
-    wipePersistence(persistance, testContext);
+    wipePersistence(persistance, testContext, persistenceWipedCheck);
   }
 
   @Test

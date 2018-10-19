@@ -1,4 +1,4 @@
-package io.slinkdeveloper.events.persistance.mongodb;
+package io.slinkydeveloper.events.persistance.mongodb;
 
 import io.slinkydeveloper.events.Event;
 import io.slinkydeveloper.events.EventState;

@@ -1,5 +1,5 @@
+import io.slinkydeveloper.events.EventManager;
 import io.slinkydeveloper.events.persistance.mongodb.MongoDbEventPersistenceManager;
-import io.slinkydeveloper.events.EventManagerAdmin;
 import io.slinkydeveloper.events.impl.EventManagerImpl;
 import io.slinkydeveloper.events.logic.EventLogicManager;
 import io.slinkydeveloper.events.persistence.EventPersistenceManager;
@@ -45,7 +45,7 @@ public class EventManagerVerticle extends AbstractVerticle {
     ServiceBinder binder = new ServiceBinder(vertx);
     this.eventManagerMessageConsumer = binder
         .setAddress("events_manager.myapp")
-        .register(EventManagerAdmin.class, eventManager);
+        .register(EventManager.class, eventManager);
 
     // Now start the event manager
     eventManager.start(v -> {

@@ -14,7 +14,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-public class EventManagerImpl implements EventManagerAdmin {
+public class EventManagerImpl implements EventManager {
 
   private final static Logger log = LoggerFactory.getLogger(EventManagerImpl.class);
 

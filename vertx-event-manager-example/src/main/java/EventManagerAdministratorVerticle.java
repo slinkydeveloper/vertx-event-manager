@@ -1,6 +1,5 @@
 import io.slinkydeveloper.events.Event;
 import io.slinkydeveloper.events.EventManager;
-import io.slinkydeveloper.events.EventManagerAdmin;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
@@ -30,7 +29,7 @@ public class EventManagerAdministratorVerticle extends AbstractVerticle {
   @Override
   public void start(Future<Void> startFuture) throws Exception {
     // Instantiate the event manager admin proxy
-    EventManagerAdmin eventManager = EventManagerAdmin.createProxy(vertx, "events_manager.myapp", new DeliveryOptions());
+    EventManager eventManager = EventManager.createProxy(vertx, "events_manager.myapp", new DeliveryOptions());
 
     vertx.setPeriodic(2000, l -> {
       eventManager.cleanEventsCompletedBefore(ZonedDateTime.now().minus(Duration.ofSeconds(2)).toString(), ar -> {

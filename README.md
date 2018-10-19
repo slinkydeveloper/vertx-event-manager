@@ -21,10 +21,11 @@ For a complete example look at [vertx-event-manager-example](vertx-event-manager
 
 ## Limitations
 
-* Only one instance can run at time and connect to the database to avoid multiple 
+* Only one instance can run at time and connect to the database to avoid multiple time events triggering.
 
 ## Planned features
 
+* Lock system to support multiple instances
 * Command line
 * Periodic jobs
 * SQL Persistence

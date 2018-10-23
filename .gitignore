@@ -3,7 +3,7 @@
 /.idea/workspace.xml
 
 # Project exclude paths
-/target/
+target/
 
 # Datasource local storage ignored files
 /.idea/dataSources/
